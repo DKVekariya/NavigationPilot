@@ -9,13 +9,11 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        ///Uncomment one by one and run you can check the different different Navigation Scenario
+                    Example1Root()
+//                    Example2Root()
+//                    Example3Root()
+//                    Example4Root()
     }
 }
 
