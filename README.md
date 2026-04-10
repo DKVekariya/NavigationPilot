@@ -6,6 +6,10 @@
 
 # 🧭 NavigationPilot
 
+<p align="center">
+    <img src ="Documents/navigation_pilot_cover_image.png" />
+</p>
+
 A modern, type-safe navigation library built entirely on SwiftUI's `NavigationStack`. NavigationPilot gives you a clean, router-style API — `push`, `pop`, `popTo`, `replace` — without UIKit, without type erasure, and without writing the same boilerplate across every project.
 
 ## ✨ Features
@@ -46,10 +50,10 @@ I have also written a detailed article on NavigationPilot explaining the design 
 
 <table>
   <tr>
-    <th width="25%">Example 1 — Push / Pop</th>
-    <th width="25%">Example 2 — Parameters</th>
-    <th width="25%">Example 3 — Callback</th>
-    <th width="25%">Example 4 — Split Screen</th>
+    <th width="25%">Ex1 — Push / Pop</th>
+    <th width="25%">Ex2 — Parameters</th>
+    <th width="25%">Ex3 — Callback</th>
+    <th width="25%">Ex4 — Split Screen</th>
   </tr>
   <tr align="center">
     <td><img src="Examples/Screenshots/example1.png" width="100%" /></td>
