@@ -44,7 +44,7 @@ A modern, type-safe navigation library built entirely on SwiftUI's `NavigationSt
 - **Zero dependencies** — only imports SwiftUI
 
 ### Article
-I have also written a detailed article on NavigationPilot explaining the design decisions and every pattern in depth. You can read it here: https://medium.com/@dkvekariya/navigating-swiftui-with-navigationpilot
+I have also written a detailed article on NavigationPilot explaining the design decisions and every pattern in depth. You can read it here: [Type-Safe SwiftUI Navigation: Building a Better NavigationStack with NavigationPilot](https://medium.com/@dkvekariya/type-safe-swiftui-navigation-building-a-better-navigationstack-with-navigationpilot-ce633e29b565)
 
 ## 📱 Screenshots
 
@@ -56,10 +56,10 @@ I have also written a detailed article on NavigationPilot explaining the design 
     <th width="25%">Ex4 — Split Screen</th>
   </tr>
   <tr align="center">
-    <td><img src="Examples/Screenshots/example1.png" width="100%" /></td>
-    <td><img src="Examples/Screenshots/example2.png" width="100%" /></td>
-    <td><img src="Examples/Screenshots/example3.png" width="100%" /></td>
-    <td><img src="Examples/Screenshots/example4.png" width="100%" /></td>
+    <td><img src="Documents/simple_push_pop.gif" width="100%" /></td>
+    <td><img src="Documents/pass_with_data.gif" width="100%" /></td>
+    <td><img src="Documents/closer_pass.gif" width="100%" /></td>
+    <td><img src="Documents/split_scree.gif" width="100%" /></td>
   </tr>
 </table>
 
