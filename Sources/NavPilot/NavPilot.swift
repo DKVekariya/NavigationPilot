@@ -12,6 +12,7 @@ import Combine
 
 /// Observable router that owns the navigation path.
 /// `T` must be `Hashable` so NavigationStack can drive itself.
+@MainActor
 public final class NavPilot<T: Hashable>: ObservableObject {
 
     /// The live navigation stack. Index 0 is always the root.
@@ -20,7 +21,10 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     /// Convenience: the route currently at the top of the stack.
     public var current: T? { stack.last }
 
-    /// Initialise with a root route.
+    /// Number of routes currently in the stack.
+    public var depth: Int { stack.count }
+
+    /// Initialize with a root route.
     public init(initial: T) {
         self.stack = [initial]
     }
@@ -87,70 +91,6 @@ public final class NavPilot<T: Hashable>: ObservableObject {
         stack = [root] + tail
     }
 }
-
-// ─────────────────────────────────────────────────────────────
-// MARK: - NavPilotHost  (root view)
-// ─────────────────────────────────────────────────────────────
-
-/// Place this once at the root of your scene.
-///
-///     NavPilotHost(pilot) { route in
-///         switch route {
-///         case .home:   HomeView()
-///         case .detail: DetailView()
-///         }
-///     }
-public struct NavPilotHost<T: Hashable, Screen: View>: View {
-
-    @ObservedObject private var pilot: NavPilot<T>
-    private let buildScreen: (T) -> Screen
-
-    public init(
-        _ pilot: NavPilot<T>,
-        @ViewBuilder buildScreen: @escaping (T) -> Screen
-    ) {
-        self.pilot = pilot
-        self.buildScreen = buildScreen
-    }
-
-    public var body: some View {
-        if let root = pilot.stack.first {
-            NavigationStack(path: tailBinding) {
-                buildScreen(root)
-                    .navigationDestination(for: T.self) { route in
-                        buildScreen(route)
-                            .environmentObject(pilot)
-                    }
-                    .environmentObject(pilot)
-            }
-            .environmentObject(pilot)
-        }
-    }
-
-    /// Binding for everything after index 0 (the "tail").
-    private var tailBinding: Binding<[T]> {
-        Binding(
-            get: { Array(pilot.stack.dropFirst()) },
-            set: { pilot.syncTail($0) }   // keeps root + syncs swipe-back
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// MARK: - Convenience modifier
-// ─────────────────────────────────────────────────────────────
-
-extension View {
-    /// Nest a NavPilotHost inside any view. Handy for split-screen.
-    public func piloted<T: Hashable, Screen: View>(
-        by pilot: NavPilot<T>,
-        @ViewBuilder buildScreen: @escaping (T) -> Screen
-    ) -> some View {
-        NavPilotHost(pilot, buildScreen: buildScreen)
-    }
-}
-
-
 
 
 
