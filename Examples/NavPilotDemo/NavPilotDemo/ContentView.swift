@@ -26,6 +26,8 @@ struct ContentView: View {
                 E5DeepLinking()
             case .statePersistence:
                 E6StatePersistence()
+            case .stackInspector:
+                E7StackInspector()
             }
         }
         .sheet(isPresented: $showSheet) {
@@ -59,6 +61,7 @@ enum NavigationType:String, Hashable, CaseIterable {
     case splitScreen
     case deepLinking
     case statePersistence
+    case stackInspector
 
     var title: String {
         switch self {
@@ -68,6 +71,7 @@ enum NavigationType:String, Hashable, CaseIterable {
         case .splitScreen: return "Split Screen"
         case .deepLinking: return "Deep Linking"
         case .statePersistence: return "State Persistence"
+        case .stackInspector: return "Stack Inspector"
         }
     }
 }

@@ -12,26 +12,36 @@ public struct NavPilotHost<T: Hashable, Screen: View>: View {
 
     @ObservedObject private var pilot: NavPilot<T>
     private let buildScreen: (T) -> Screen
+    private let showsStackInspector: Bool
 
     public init(
         _ pilot: NavPilot<T>,
+        showsStackInspector: Bool = false,
         @ViewBuilder buildScreen: @escaping (T) -> Screen
     ) {
         self.pilot = pilot
         self.buildScreen = buildScreen
+        self.showsStackInspector = showsStackInspector
     }
 
     public var body: some View {
         if let root = pilot.stack.first {
-            NavigationStack(path: tailBinding) {
-                buildScreen(root)
-                    .navigationDestination(for: T.self) { route in
-                        buildScreen(route)
-                            .environmentObject(pilot)
-                    }
-                    .environmentObject(pilot)
+            ZStack(alignment: .bottom) {
+                NavigationStack(path: tailBinding) {
+                    buildScreen(root)
+                        .navigationDestination(for: T.self) { route in
+                            buildScreen(route)
+                                .environmentObject(pilot)
+                        }
+                        .environmentObject(pilot)
+                }
+                .environmentObject(pilot)
+
+                if showsStackInspector {
+                    NavPilotStackInspector(pilot)
+                        .allowsHitTesting(false)
+                }
             }
-            .environmentObject(pilot)
         } else {
             EmptyView()
                 .onAppear {
@@ -57,8 +67,9 @@ extension View {
     /// Nest a NavPilotHost inside any view. Handy for split-screen.
     public func piloted<T: Hashable, Screen: View>(
         by pilot: NavPilot<T>,
+        showsStackInspector: Bool = false,
         @ViewBuilder buildScreen: @escaping (T) -> Screen
     ) -> some View {
-        NavPilotHost(pilot, buildScreen: buildScreen)
+        NavPilotHost(pilot, showsStackInspector: showsStackInspector, buildScreen: buildScreen)
     }
 }
