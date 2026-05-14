@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import NavPilot
 
@@ -5,6 +6,17 @@ enum TestRoute: Hashable, Equatable {
     case home
     case detail(id: Int)
     case settings
+}
+
+struct DeepLinkProduct: Codable, Hashable, Equatable {
+    let id: Int
+    let name: String
+}
+
+enum DeepLinkRoute: Codable, Hashable, Equatable {
+    case home
+    case product(DeepLinkProduct)
+    case checkout(items: [String])
 }
 
 @MainActor
@@ -67,12 +79,32 @@ struct NavPilotTests {
         #expect(pilot.current == .detail(id: 1))
     }
 
+    @Test func popToLastReturnsToMostRecentMatchingRoute() async throws {
+        let pilot = NavPilot(initial: TestRoute.home)
+        pilot.push(.detail(id: 1), .settings, .detail(id: 1), .detail(id: 2))
+
+        pilot.popToLast(.detail(id: 1))
+
+        #expect(pilot.stack == [.home, .detail(id: 1), .settings, .detail(id: 1)])
+        #expect(pilot.current == .detail(id: 1))
+    }
+
     @Test func popToMissingRouteLeavesStackUnchanged() async throws {
         let pilot = NavPilot(initial: TestRoute.home)
         pilot.push(.detail(id: 1))
         let snapshot = pilot.stack
 
         pilot.popTo(.settings)
+
+        #expect(pilot.stack == snapshot)
+    }
+
+    @Test func popToLastMissingRouteLeavesStackUnchanged() async throws {
+        let pilot = NavPilot(initial: TestRoute.home)
+        pilot.push(.detail(id: 1))
+        let snapshot = pilot.stack
+
+        pilot.popToLast(.settings)
 
         #expect(pilot.stack == snapshot)
     }
@@ -168,5 +200,34 @@ struct NavPilotTests {
         }
 
         #expect(messages.isEmpty)
+    }
+
+    @Test func encodesAndDecodesDeepLinks() async throws {
+        let pilot = NavPilot<DeepLinkRoute>(initial: .home)
+        pilot.push(.product(DeepLinkProduct(id: 1, name: "Keyboard")))
+        pilot.push(.checkout(items: ["Keyboard"]))
+
+        let url = pilot.deepLinkURL()
+        #expect(url?.scheme == "navpilot")
+
+        let restored = NavPilot<DeepLinkRoute>(initial: .home)
+        let handled = restored.handleDeepLink(url!)
+
+        #expect(handled)
+        #expect(restored.stack == [
+            .home,
+            .product(DeepLinkProduct(id: 1, name: "Keyboard")),
+            .checkout(items: ["Keyboard"])
+        ])
+    }
+
+    @Test func rejectsInvalidDeepLinks() async throws {
+        let pilot = NavPilot<DeepLinkRoute>(initial: .home)
+        let snapshot = pilot.stack
+
+        let handled = pilot.handleDeepLink(URL(string: "https://example.com/invalid")!)
+
+        #expect(!handled)
+        #expect(pilot.stack == snapshot)
     }
 }

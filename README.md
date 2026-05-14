@@ -34,6 +34,9 @@ A modern, type-safe navigation library built entirely on SwiftUI's `NavigationSt
 ### 🛠 Debugging
 - **Native logging** — pass `debug: true` to `NavPilot` to enable internal `OSLog`-based navigation logs
 
+### 🔗 Deep Linking
+- **URL round-trip** — generate and restore stack state for `Codable` routes using a lightweight URL format
+
 ### 🌿 Environment Injection
 - **`@EnvironmentObject`** — every child view receives the pilot automatically
 - **No prop drilling** — navigate from anywhere in the view hierarchy
@@ -202,6 +205,15 @@ Perfect for post-action flows where the back-stack should differ from the forwar
 pilot.replace([.home, .confirmation])
 ```
 
+### Deep Linking
+
+For `Codable` routes, you can generate a deep-link URL for the current stack and restore it later:
+
+```swift
+let url = pilot.deepLinkURL()
+pilot.handleDeepLink(url)
+```
+
 ## 🏗️ Architecture Highlights
 
 ### State Management
@@ -230,9 +242,12 @@ pilot.replace([.home, .confirmation])
 | `pop()` | Pop the top route. No-op at root |
 | `pop(count: n)` | Pop `n` routes at once, clamped to root |
 | `popTo(_ route)` | Pop back to the first occurrence of a route |
+| `popToLast(_ route)` | Pop back to the last occurrence of a route |
 | `popToRoot()` | Clear everything above the root |
 | `replace(_ routes)` | Replace the entire stack |
 | `replaceCurrent(with:)` | Swap only the top-most route |
+| `deepLinkURL()` | Generate a URL that represents the current stack |
+| `handleDeepLink(_:)` | Restore the stack from a deep-link URL |
 
 ### Properties
 
@@ -257,6 +272,7 @@ private let activeExample: Int = 1
 | 2 | Typesafe Parameters | Typed struct params, `replace`, `replaceCurrent` |
 | 3 | Callback Route | Closure passed as a route parameter |
 | 4 | Split Screen | Two independent pilots in a vertical split layout |
+| 5 | Deep Linking | Generate and restore a stack from a URL |
 
 ## 🐛 Known Limitations
 

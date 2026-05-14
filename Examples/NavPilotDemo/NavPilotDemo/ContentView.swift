@@ -13,15 +13,6 @@ struct ContentView: View {
     var body: some View {
         ///Uncomment one by one and run you can check the different different Navigation Scenario
         Group {
-            HStack {
-                Button("Change Navigation") {
-                    showSheet.toggle()
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(.yellow)
-            
             switch navType {
             case .pushPop:
                 E1SimplePush()
@@ -31,6 +22,8 @@ struct ContentView: View {
                 E3CloserPass()
             case .splitScreen:
                 E4SplitScreen()
+            case .deepLinking:
+                E5DeepLinking()
             }
         }
         .sheet(isPresented: $showSheet) {
@@ -41,7 +34,7 @@ struct ContentView: View {
                         self.showSheet.toggle()
                     }) {
                         HStack {
-                            Text(nav.rawValue.capitalized)
+                            Text(nav.title)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(10)
@@ -64,4 +57,15 @@ enum NavigationType:String, Hashable, CaseIterable {
     case passData
     case closerPass
     case splitScreen
+    case deepLinking
+
+    var title: String {
+        switch self {
+        case .pushPop: return "Push Pop"
+        case .passData: return "Pass Data"
+        case .closerPass: return "Closure Pass"
+        case .splitScreen: return "Split Screen"
+        case .deepLinking: return "Deep Linking"
+        }
+    }
 }

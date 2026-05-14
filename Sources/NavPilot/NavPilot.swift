@@ -84,6 +84,17 @@ public final class NavPilot<T: Hashable>: ObservableObject {
         NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) -> \(stackDescription())")
     }
 
+    /// Pop back to the last occurrence of `route`.
+    /// Stack is unchanged if `route` is not found.
+    public func popToLast(_ route: T) {
+        guard let idx = stack.lastIndex(of: route) else {
+            NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) ignored (not found) -> \(stackDescription())")
+            return
+        }
+        stack = Array(stack.prefix(through: idx))
+        NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) -> \(stackDescription())")
+    }
+
     /// Pop everything back to the root.
     public func popToRoot() {
         guard let root = stack.first else {
@@ -128,6 +139,26 @@ public final class NavPilot<T: Hashable>: ObservableObject {
         NavPilotLogger.log(enabled: debug, "syncTail -> \(stackDescription())")
     }
 
+    /// Generate a deep-link URL for the current stack.
+    public func deepLinkURL(scheme: String = "navpilot", host: String = "stack") -> URL? where T: Codable {
+        NavPilotDeepLinkCodec.makeURL(from: stack, scheme: scheme, host: host)
+    }
+
+    /// Replace the current stack from a deep-link URL.
+    /// Returns `true` when the URL could be decoded into a non-empty stack.
+    @discardableResult
+    public func handleDeepLink(_ url: URL, scheme: String = "navpilot", host: String = "stack") -> Bool where T: Codable {
+        let routes: [T]? = NavPilotDeepLinkCodec.decode(url, expectedScheme: scheme, expectedHost: host)
+        guard let routes, !routes.isEmpty else {
+            NavPilotLogger.log(enabled: debug, "deepLink ignored -> \(url.absoluteString)")
+            return false
+        }
+
+        stack = routes
+        NavPilotLogger.log(enabled: debug, "deepLink handled -> \(stackDescription())")
+        return true
+    }
+
     private func describe(_ route: T) -> String {
         String(describing: route)
     }
@@ -137,4 +168,3 @@ public final class NavPilot<T: Hashable>: ObservableObject {
         return "[" + values.joined(separator: " -> ") + "]"
     }
 }
-
