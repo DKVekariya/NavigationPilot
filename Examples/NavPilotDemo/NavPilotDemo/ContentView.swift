@@ -24,6 +24,8 @@ struct ContentView: View {
                 E4SplitScreen()
             case .deepLinking:
                 E5DeepLinking()
+            case .statePersistence:
+                E6StatePersistence()
             }
         }
         .sheet(isPresented: $showSheet) {
@@ -33,16 +35,14 @@ struct ContentView: View {
                         self.navType = nav
                         self.showSheet.toggle()
                     }) {
-                        HStack {
-                            Text(nav.title)
-                        }
+                        Text(nav.title)
                         .frame(maxWidth: .infinity)
                         .padding(10)
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
-            .presentationDetents([.height(250)])
+            .presentationDetents([.height(300)])
         }
     }
 }
@@ -58,6 +58,7 @@ enum NavigationType:String, Hashable, CaseIterable {
     case closerPass
     case splitScreen
     case deepLinking
+    case statePersistence
 
     var title: String {
         switch self {
@@ -66,6 +67,7 @@ enum NavigationType:String, Hashable, CaseIterable {
         case .closerPass: return "Closure Pass"
         case .splitScreen: return "Split Screen"
         case .deepLinking: return "Deep Linking"
+        case .statePersistence: return "State Persistence"
         }
     }
 }

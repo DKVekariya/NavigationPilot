@@ -15,6 +15,7 @@ import Combine
 @MainActor
 public final class NavPilot<T: Hashable>: ObservableObject {
     private let debug: Bool
+    private let persistenceHandler: (([T]) -> Void)?
 
     /// The live navigation stack. Index 0 is always the root.
     @Published public private(set) var stack: [T]
@@ -28,8 +29,17 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     /// Initialize with a root route.
     public init(initial: T, debug: Bool = false) {
         self.debug = debug
+        self.persistenceHandler = nil
         self.stack = [initial]
         NavPilotLogger.log(enabled: debug, "init \(stackDescription())")
+    }
+
+    private init(initial: T, debug: Bool, loadedStack: [T]?, persistenceHandler: (([T]) -> Void)?) {
+        self.debug = debug
+        self.persistenceHandler = persistenceHandler
+        self.stack = loadedStack ?? [initial]
+        NavPilotLogger.log(enabled: debug, "init \(stackDescription())")
+        persistIfNeeded()
     }
 
     // ── Push ──────────────────────────────────────────────────
@@ -37,6 +47,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     /// Push one route onto the stack.
     public func push(_ route: T) {
         stack.append(route)
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "push \(describe(route)) -> \(stackDescription())")
     }
 
@@ -47,6 +58,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack.append(contentsOf: routes)
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "push \(routes.map(describe).joined(separator: ", ")) -> \(stackDescription())")
     }
 
@@ -59,6 +71,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack.removeLast()
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "pop -> \(stackDescription())")
     }
 
@@ -70,6 +83,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack.removeLast(removeCount)
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "pop(count: \(n)) -> \(stackDescription())")
     }
 
@@ -81,6 +95,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack = Array(stack.prefix(through: idx))
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) -> \(stackDescription())")
     }
 
@@ -92,6 +107,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack = Array(stack.prefix(through: idx))
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) -> \(stackDescription())")
     }
 
@@ -102,6 +118,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack = [root]
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "popToRoot -> \(stackDescription())")
     }
 
@@ -114,6 +131,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack = routes
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "replace -> \(stackDescription())")
     }
 
@@ -124,6 +142,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack[stack.count - 1] = route
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "replaceCurrent \(describe(route)) -> \(stackDescription())")
     }
 
@@ -136,6 +155,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack = [root] + tail
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "syncTail -> \(stackDescription())")
     }
 
@@ -155,6 +175,7 @@ public final class NavPilot<T: Hashable>: ObservableObject {
         }
 
         stack = routes
+        persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "deepLink handled -> \(stackDescription())")
         return true
     }
@@ -166,5 +187,29 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     private func stackDescription(_ routes: [T]? = nil) -> String {
         let values = (routes ?? stack).map(describe)
         return "[" + values.joined(separator: " -> ") + "]"
+    }
+
+    private func persistIfNeeded() {
+        persistenceHandler?(stack)
+    }
+}
+
+public extension NavPilot where T: Codable {
+    /// Create a pilot that can optionally restore and save its route stack.
+    ///
+    /// Set `persistState` to `true` to enable automatic persistence, or leave it `false`
+    /// to keep navigation state in-memory only.
+    ///
+    /// This works best when each route contains enough `Codable` data to recreate the screen
+    /// and its view model after relaunch. It can fail to restore meaningfully if a screen
+    /// depends on runtime-only values, closures, or non-codable objects that are not present
+    /// in the route data.
+    convenience init(initial: T, debug: Bool = false, persistState: Bool = false, persistenceKey: String? = nil) {
+        let key = NavPilotPersistence.defaultKey(for: T.self, customKey: persistenceKey)
+        let loaded: [T]? = persistState ? NavPilotPersistence.loadStack(forKey: key) : nil
+        let handler: (([T]) -> Void)? = persistState ? { stack in
+            NavPilotPersistence.saveStack(stack, forKey: key)
+        } : nil
+        self.init(initial: initial, debug: debug, loadedStack: loaded, persistenceHandler: handler)
     }
 }
