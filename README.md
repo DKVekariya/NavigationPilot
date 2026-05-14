@@ -266,6 +266,8 @@ private let activeExample: Int = 1
 
 **Divyesh Vekariya**
 - GitHub: [@DKVekariya](https://github.com/DKVekariya)
+- Medium: [@dkvekariya](https://medium.com/@dkvekariya)
+- daily.dev: [@divyesh_vekariya](https://app.daily.dev/divyesh_vekariya)
 - Twitter: [@D_K_Vekariya](https://x.com/D_K_Vekariya)
 - LinkedIn: [Divyesh Vekariya](https://www.linkedin.com/in/dkvekariya)
 
