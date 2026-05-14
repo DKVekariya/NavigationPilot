@@ -1,6 +1,6 @@
 ![iOS](https://img.shields.io/badge/iOS-16.0+-blue.svg)
 ![macOS](https://img.shields.io/badge/macOS-15.0+-blue.svg)
-![Swift](https://img.shields.io/badge/Swift-6.3+-orange.svg)
+![Swift](https://img.shields.io/badge/Swift-6.1+-orange.svg)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-4.0-green.svg)
 ![SPM](https://img.shields.io/badge/Swift_Package_Manager-compatible-brightgreen.svg)
 
