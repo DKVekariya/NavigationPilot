@@ -14,6 +14,7 @@ import Combine
 /// `T` must be `Hashable` so NavigationStack can drive itself.
 @MainActor
 public final class NavPilot<T: Hashable>: ObservableObject {
+    private let debug: Bool
 
     /// The live navigation stack. Index 0 is always the root.
     @Published public private(set) var stack: [T]
@@ -25,8 +26,10 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     public var depth: Int { stack.count }
 
     /// Initialize with a root route.
-    public init(initial: T) {
+    public init(initial: T, debug: Bool = false) {
+        self.debug = debug
         self.stack = [initial]
+        NavPilotLogger.log(enabled: debug, "init \(stackDescription())")
     }
 
     // ── Push ──────────────────────────────────────────────────
@@ -34,65 +37,104 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     /// Push one route onto the stack.
     public func push(_ route: T) {
         stack.append(route)
+        NavPilotLogger.log(enabled: debug, "push \(describe(route)) -> \(stackDescription())")
     }
 
     /// Push multiple routes at once (pushed in the order given).
     public func push(_ routes: T...) {
+        guard !routes.isEmpty else {
+            NavPilotLogger.log(enabled: debug, "push ignored: no routes -> \(stackDescription())")
+            return
+        }
         stack.append(contentsOf: routes)
+        NavPilotLogger.log(enabled: debug, "push \(routes.map(describe).joined(separator: ", ")) -> \(stackDescription())")
     }
 
     // ── Pop ───────────────────────────────────────────────────
 
     /// Pop the top route. No-op if already at root.
     public func pop() {
-        guard stack.count > 1 else { return }
+        guard stack.count > 1 else {
+            NavPilotLogger.log(enabled: debug, "pop ignored at root -> \(stackDescription())")
+            return
+        }
         stack.removeLast()
+        NavPilotLogger.log(enabled: debug, "pop -> \(stackDescription())")
     }
 
     /// Pop `n` routes at once. Always keeps the root.
     public func pop(count n: Int) {
         let removeCount = min(n, stack.count - 1)
-        guard removeCount > 0 else { return }
+        guard removeCount > 0 else {
+            NavPilotLogger.log(enabled: debug, "pop(count: \(n)) ignored -> \(stackDescription())")
+            return
+        }
         stack.removeLast(removeCount)
+        NavPilotLogger.log(enabled: debug, "pop(count: \(n)) -> \(stackDescription())")
     }
 
     /// Pop back to the first occurrence of `route`.
     /// Stack is unchanged if `route` is not found.
     public func popTo(_ route: T) {
-        guard let idx = stack.firstIndex(of: route) else { return }
+        guard let idx = stack.firstIndex(of: route) else {
+            NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) ignored (not found) -> \(stackDescription())")
+            return
+        }
         stack = Array(stack.prefix(through: idx))
+        NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) -> \(stackDescription())")
     }
 
     /// Pop everything back to the root.
     public func popToRoot() {
-        guard let root = stack.first else { return }
+        guard let root = stack.first else {
+            NavPilotLogger.log(enabled: debug, "popToRoot ignored -> []")
+            return
+        }
         stack = [root]
+        NavPilotLogger.log(enabled: debug, "popToRoot -> \(stackDescription())")
     }
 
     // ── Replace ───────────────────────────────────────────────
 
     /// Replace the entire stack. The first element becomes the new root.
     public func replace(_ routes: [T]) {
-        guard !routes.isEmpty else { return }
+        guard !routes.isEmpty else {
+            NavPilotLogger.log(enabled: debug, "replace ignored: [] -> \(stackDescription())")
+            return
+        }
         stack = routes
+        NavPilotLogger.log(enabled: debug, "replace -> \(stackDescription())")
     }
 
     /// Swap only the top-most route.
     public func replaceCurrent(with route: T) {
-        guard !stack.isEmpty else { return }
+        guard !stack.isEmpty else {
+            NavPilotLogger.log(enabled: debug, "replaceCurrent \(describe(route)) ignored -> []")
+            return
+        }
         stack[stack.count - 1] = route
+        NavPilotLogger.log(enabled: debug, "replaceCurrent \(describe(route)) -> \(stackDescription())")
     }
 
     // ── Internal ──────────────────────────────────────────────
 
     /// Called by NavPilotHost to sync the stack after a native swipe-back.
     func syncTail(_ tail: [T]) {
-        guard let root = stack.first else { return }
+        guard let root = stack.first else {
+            NavPilotLogger.log(enabled: debug, "syncTail ignored -> []")
+            return
+        }
         stack = [root] + tail
+        NavPilotLogger.log(enabled: debug, "syncTail -> \(stackDescription())")
+    }
+
+    private func describe(_ route: T) -> String {
+        String(describing: route)
+    }
+
+    private func stackDescription(_ routes: [T]? = nil) -> String {
+        let values = (routes ?? stack).map(describe)
+        return "[" + values.joined(separator: " -> ") + "]"
     }
 }
-
-
-
-
 

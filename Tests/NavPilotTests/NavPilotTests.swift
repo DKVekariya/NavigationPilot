@@ -122,4 +122,51 @@ struct NavPilotTests {
         #expect(pilot.stack == [.home, .detail(id: 42)])
         #expect(pilot.current == .detail(id: 42))
     }
+
+    @Test func emitsDebugLogsForNavigationActions() async throws {
+        var messages: [String] = []
+        NavPilotLogger.withTestSink({ messages.append($0) }) {
+            let pilot = NavPilot(initial: TestRoute.home, debug: true)
+
+            pilot.push(.detail(id: 1))
+            pilot.pop()
+            pilot.replaceCurrent(with: .settings)
+        }
+
+        #expect(messages == [
+            "init [home]",
+            "push detail(id: 1) -> [home -> detail(id: 1)]",
+            "pop -> [home]",
+            "replaceCurrent settings -> [settings]"
+        ])
+    }
+
+    @Test func emitsDebugLogsForNoopActions() async throws {
+        var messages: [String] = []
+        NavPilotLogger.withTestSink({ messages.append($0) }) {
+            let pilot = NavPilot(initial: TestRoute.home, debug: true)
+
+            pilot.pop()
+            pilot.popTo(.settings)
+            pilot.replace([])
+        }
+
+        #expect(messages == [
+            "init [home]",
+            "pop ignored at root -> [home]",
+            "popTo settings ignored (not found) -> [home]",
+            "replace ignored: [] -> [home]"
+        ])
+    }
+
+    @Test func staysSilentByDefault() async throws {
+        var messages: [String] = []
+        NavPilotLogger.withTestSink({ messages.append($0) }) {
+            let pilot = NavPilot(initial: TestRoute.home)
+            pilot.push(.detail(id: 1))
+            pilot.pop()
+        }
+
+        #expect(messages.isEmpty)
+    }
 }

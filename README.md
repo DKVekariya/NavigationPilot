@@ -31,6 +31,9 @@ A modern, type-safe navigation library built entirely on SwiftUI's `NavigationSt
 - **Gesture sync** — swipe-back updates the pilot's stack automatically via a `Binding`
 - **No UIKit** — built entirely on `NavigationStack` and SwiftUI state
 
+### 🛠 Debugging
+- **Native logging** — pass `debug: true` to `NavPilot` to enable internal `OSLog`-based navigation logs
+
 ### 🌿 Environment Injection
 - **`@EnvironmentObject`** — every child view receives the pilot automatically
 - **No prop drilling** — navigate from anywhere in the view hierarchy
