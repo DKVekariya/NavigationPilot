@@ -84,6 +84,17 @@ public final class NavPilot<T: Hashable>: ObservableObject {
         NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) -> \(stackDescription())")
     }
 
+    /// Pop back to the last occurrence of `route`.
+    /// Stack is unchanged if `route` is not found.
+    public func popToLast(_ route: T) {
+        guard let idx = stack.lastIndex(of: route) else {
+            NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) ignored (not found) -> \(stackDescription())")
+            return
+        }
+        stack = Array(stack.prefix(through: idx))
+        NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) -> \(stackDescription())")
+    }
+
     /// Pop everything back to the root.
     public func popToRoot() {
         guard let root = stack.first else {

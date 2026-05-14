@@ -242,6 +242,7 @@ pilot.handleDeepLink(url)
 | `pop()` | Pop the top route. No-op at root |
 | `pop(count: n)` | Pop `n` routes at once, clamped to root |
 | `popTo(_ route)` | Pop back to the first occurrence of a route |
+| `popToLast(_ route)` | Pop back to the last occurrence of a route |
 | `popToRoot()` | Clear everything above the root |
 | `replace(_ routes)` | Replace the entire stack |
 | `replaceCurrent(with:)` | Swap only the top-most route |

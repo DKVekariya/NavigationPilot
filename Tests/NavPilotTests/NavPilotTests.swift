@@ -79,12 +79,32 @@ struct NavPilotTests {
         #expect(pilot.current == .detail(id: 1))
     }
 
+    @Test func popToLastReturnsToMostRecentMatchingRoute() async throws {
+        let pilot = NavPilot(initial: TestRoute.home)
+        pilot.push(.detail(id: 1), .settings, .detail(id: 1), .detail(id: 2))
+
+        pilot.popToLast(.detail(id: 1))
+
+        #expect(pilot.stack == [.home, .detail(id: 1), .settings, .detail(id: 1)])
+        #expect(pilot.current == .detail(id: 1))
+    }
+
     @Test func popToMissingRouteLeavesStackUnchanged() async throws {
         let pilot = NavPilot(initial: TestRoute.home)
         pilot.push(.detail(id: 1))
         let snapshot = pilot.stack
 
         pilot.popTo(.settings)
+
+        #expect(pilot.stack == snapshot)
+    }
+
+    @Test func popToLastMissingRouteLeavesStackUnchanged() async throws {
+        let pilot = NavPilot(initial: TestRoute.home)
+        pilot.push(.detail(id: 1))
+        let snapshot = pilot.stack
+
+        pilot.popToLast(.settings)
 
         #expect(pilot.stack == snapshot)
     }
