@@ -37,6 +37,9 @@ A modern, type-safe navigation library built entirely on SwiftUI's `NavigationSt
 ### 🔗 Deep Linking
 - **URL round-trip** — generate and restore stack state for `Codable` routes using a lightweight URL format
 
+### 💾 State Persistence
+- **Opt-in restore** — pass `persistState: true` for `Codable` routes to save and reload the stack automatically
+
 ### 🌿 Environment Injection
 - **`@EnvironmentObject`** — every child view receives the pilot automatically
 - **No prop drilling** — navigate from anywhere in the view hierarchy
@@ -134,7 +137,7 @@ enum AppRoute: Hashable {
 ```swift
 @main
 struct MyApp: App {
-    @StateObject var pilot = NavPilot(initial: AppRoute.home)
+    @StateObject var pilot = NavPilot(initial: AppRoute.home, persistState: true)
 
     var body: some Scene {
         WindowGroup {
@@ -214,6 +217,14 @@ let url = pilot.deepLinkURL()
 pilot.handleDeepLink(url)
 ```
 
+### State Persistence
+
+When you want the stack to survive app relaunches, opt in with `persistState: true`:
+
+```swift
+@StateObject var pilot = NavPilot(initial: AppRoute.home, persistState: true)
+```
+
 ## 🏗️ Architecture Highlights
 
 ### State Management
@@ -248,6 +259,7 @@ pilot.handleDeepLink(url)
 | `replaceCurrent(with:)` | Swap only the top-most route |
 | `deepLinkURL()` | Generate a URL that represents the current stack |
 | `handleDeepLink(_:)` | Restore the stack from a deep-link URL |
+| `persistState` | Opt-in initializer behavior for Codable routes that stores the stack |
 
 ### Properties
 
@@ -273,6 +285,7 @@ private let activeExample: Int = 1
 | 3 | Callback Route | Closure passed as a route parameter |
 | 4 | Split Screen | Two independent pilots in a vertical split layout |
 | 5 | Deep Linking | Generate and restore a stack from a URL |
+| 6 | State Persistence | Save and restore stack across app relaunch |
 
 ## 🐛 Known Limitations
 

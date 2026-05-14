@@ -230,4 +230,30 @@ struct NavPilotTests {
         #expect(!handled)
         #expect(pilot.stack == snapshot)
     }
+
+    @Test func persistsStackWhenEnabled() async throws {
+        let key = "NavPilotTests.\(UUID().uuidString)"
+        defer { NavPilotPersistence.clear(forKey: key) }
+
+        let firstPilot = NavPilot<DeepLinkRoute>(initial: .home, persistState: true, persistenceKey: key)
+        firstPilot.push(.product(DeepLinkProduct(id: 7, name: "Keyboard")))
+        firstPilot.push(.checkout(items: ["Keyboard"]))
+
+        #expect(NavPilotPersistence.loadStack(forKey: key) == firstPilot.stack)
+
+        let restoredPilot = NavPilot<DeepLinkRoute>(initial: .home, persistState: true, persistenceKey: key)
+        #expect(restoredPilot.stack == firstPilot.stack)
+        #expect(restoredPilot.current == .checkout(items: ["Keyboard"]))
+    }
+
+    @Test func doesNotPersistWhenDisabled() async throws {
+        let key = "NavPilotTests.\(UUID().uuidString)"
+        defer { NavPilotPersistence.clear(forKey: key) }
+
+        let pilot = NavPilot<DeepLinkRoute>(initial: .home, persistenceKey: key)
+        pilot.push(.product(DeepLinkProduct(id: 7, name: "Keyboard")))
+
+        let persisted: [DeepLinkRoute]? = NavPilotPersistence.loadStack(forKey: key)
+        #expect(persisted == nil)
+    }
 }
