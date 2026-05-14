@@ -34,6 +34,9 @@ A modern, type-safe navigation library built entirely on SwiftUI's `NavigationSt
 ### 🛠 Debugging
 - **Native logging** — pass `debug: true` to `NavPilot` to enable internal `OSLog`-based navigation logs
 
+### 🧪 Stack Inspector
+- **Debug overlay** — pass `showsStackInspector: true` to `NavPilotHost` to preview the live stack in development
+
 ### 🔗 Deep Linking
 - **URL round-trip** — generate and restore stack state for `Codable` routes using a lightweight URL format
 
@@ -286,6 +289,7 @@ private let activeExample: Int = 1
 | 4 | Split Screen | Two independent pilots in a vertical split layout |
 | 5 | Deep Linking | Generate and restore a stack from a URL |
 | 6 | State Persistence | Save and restore stack across app relaunch |
+| 7 | Stack Inspector | Show the live route stack as an overlay |
 
 ## 🐛 Known Limitations
 
