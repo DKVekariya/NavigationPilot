@@ -25,5 +25,8 @@ jobs:
       - name: Resolve dependencies
         run: swift package resolve
 
-      - name: Build and run tests
-        run: swift test
+      - name: Build
+        run: swift build
+
+      - name: Run tests
+        run: swift test --disable-sandbox
