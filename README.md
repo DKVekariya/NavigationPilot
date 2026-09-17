@@ -43,6 +43,12 @@ A modern, type-safe navigation library built entirely on SwiftUI's `NavigationSt
 ### 💾 State Persistence
 - **Opt-in restore** — pass `persistState: true` for `Codable` routes to save and reload the stack automatically
 
+### 🚧 Route Guards
+- **Opt-in access control** — pass `routeGuard` to allow or block programmatic pushes, replacements, and deep links
+
+### ✨ Navigation Transitions
+- **Per-push effects** — pass an optional transition to `push(_:withAnimation:)`; the matching reverse effect is used when popping
+
 ### 🌿 Environment Injection
 - **`@EnvironmentObject`** — every child view receives the pilot automatically
 - **No prop drilling** — navigate from anywhere in the view hierarchy
@@ -228,6 +234,35 @@ When you want the stack to survive app relaunches, opt in with `persistState: tr
 @StateObject var pilot = NavPilot(initial: AppRoute.home, persistState: true)
 ```
 
+### Route Guards
+
+Pass a `routeGuard` when some destinations require authentication, a permission, or another app-level condition. Return `false` to leave the stack unchanged:
+
+```swift
+@StateObject var pilot = NavPilot(initial: AppRoute.home) { route, action in
+    switch route {
+    case .accountSettings:
+        return session.isSignedIn
+    default:
+        return true
+    }
+}
+```
+
+The guard is evaluated for `push`, `replace`, `replaceCurrent`, and `handleDeepLink`. A multi-route push or replacement is atomic: if any route is blocked, none of the routes are added.
+
+### Navigation Transitions
+
+Use the system behavior by default, or opt in per pushed route:
+
+```swift
+pilot.push(.product(id: 42), withAnimation: .crossDissolve)
+pilot.push(.checkout, withAnimation: .scale)
+pilot.push(.settings) // System transition
+```
+
+Available styles are `slide`, `slideVertical`, `fadeIn`, `fadeOut`, `crossDissolve`, `scale`, `zoom`, `flip`, and `windmill`. The selected style is remembered for that stack entry and reverses when the user pops it.
+
 ## 🏗️ Architecture Highlights
 
 ### State Management
@@ -263,6 +298,8 @@ When you want the stack to survive app relaunches, opt in with `persistState: tr
 | `deepLinkURL()` | Generate a URL that represents the current stack |
 | `handleDeepLink(_:)` | Restore the stack from a deep-link URL |
 | `persistState` | Opt-in initializer behavior for Codable routes that stores the stack |
+| `routeGuard` | Optional initializer policy that allows or blocks programmatic route changes |
+| `push(_:withAnimation:)` | Push a route with an optional custom navigation transition |
 
 ### Properties
 
@@ -290,6 +327,8 @@ private let activeExample: Int = 1
 | 5 | Deep Linking | Generate and restore a stack from a URL |
 | 6 | State Persistence | Save and restore stack across app relaunch |
 | 7 | Stack Inspector | Show the live route stack as an overlay |
+| 8 | Route Guards | Conditionally allow or block protected destinations |
+| 9 | Navigation Transitions | Per-push custom transitions with matching pop effects |
 
 ## 🐛 Known Limitations
 
