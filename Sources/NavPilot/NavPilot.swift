@@ -8,6 +8,18 @@
 import SwiftUI
 import Combine
 
+/// Describes the navigation request being evaluated by a route guard.
+public enum NavPilotNavigationAction: Sendable {
+    case push
+    case replace
+    case replaceCurrent
+    case deepLink
+}
+
+/// A synchronous policy used to allow or deny programmatic navigation.
+/// Return `true` to allow the route or `false` to keep the current stack unchanged.
+public typealias NavPilotRouteGuard<T> = (T, NavPilotNavigationAction) -> Bool
+
 // MARK: - NavPilot  (the router / state holder)
 
 /// Observable router that owns the navigation path.
@@ -16,6 +28,9 @@ import Combine
 public final class NavPilot<T: Hashable>: ObservableObject {
     private let debug: Bool
     private let persistenceHandler: (([T]) -> Void)?
+    private let routeGuard: NavPilotRouteGuard<T>?
+    private var routeTransitions: [NavPilotNavigationTransition?]
+    private var transitionApplier: ((NavPilotNavigationTransition?) -> Void)?
 
     /// The live navigation stack. Index 0 is always the root.
     @Published public private(set) var stack: [T]
@@ -27,17 +42,32 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     public var depth: Int { stack.count }
 
     /// Initialize with a root route.
-    public init(initial: T, debug: Bool = false) {
+    public init(
+        initial: T,
+        debug: Bool = false,
+        routeGuard: NavPilotRouteGuard<T>? = nil
+    ) {
         self.debug = debug
         self.persistenceHandler = nil
+        self.routeGuard = routeGuard
         self.stack = [initial]
+        self.routeTransitions = [nil]
         NavPilotLogger.log(enabled: debug, "init \(stackDescription())")
     }
 
-    private init(initial: T, debug: Bool, loadedStack: [T]?, persistenceHandler: (([T]) -> Void)?) {
+    private init(
+        initial: T,
+        debug: Bool,
+        loadedStack: [T]?,
+        persistenceHandler: (([T]) -> Void)?,
+        routeGuard: NavPilotRouteGuard<T>?
+    ) {
+        let restoredStack = loadedStack ?? [initial]
         self.debug = debug
         self.persistenceHandler = persistenceHandler
-        self.stack = loadedStack ?? [initial]
+        self.routeGuard = routeGuard
+        self.stack = restoredStack
+        self.routeTransitions = Array(repeating: nil, count: restoredStack.count)
         NavPilotLogger.log(enabled: debug, "init \(stackDescription())")
         persistIfNeeded()
     }
@@ -46,18 +76,37 @@ public final class NavPilot<T: Hashable>: ObservableObject {
 
     /// Push one route onto the stack.
     public func push(_ route: T) {
+        push(route, withAnimation: nil)
+    }
+
+    /// Push one route using an optional custom transition.
+    ///
+    /// Passing `nil` keeps the platform's normal navigation transition. The same transition
+    /// is used when this route is later popped.
+    public func push(_ route: T, withAnimation animation: NavPilotNavigationTransition?) {
+        guard allows(route, action: .push) else { return }
+        applyTransition(animation)
         stack.append(route)
+        routeTransitions.append(animation)
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "push \(describe(route)) -> \(stackDescription())")
     }
 
     /// Push multiple routes at once (pushed in the order given).
     public func push(_ routes: T...) {
+        push(routes, withAnimation: nil)
+    }
+
+    /// Push multiple routes using the same optional custom transition.
+    public func push(_ routes: [T], withAnimation animation: NavPilotNavigationTransition?) {
         guard !routes.isEmpty else {
             NavPilotLogger.log(enabled: debug, "push ignored: no routes -> \(stackDescription())")
             return
         }
+        guard routes.allSatisfy({ allows($0, action: .push) }) else { return }
+        applyTransition(animation)
         stack.append(contentsOf: routes)
+        routeTransitions.append(contentsOf: Array(repeating: animation, count: routes.count))
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "push \(routes.map(describe).joined(separator: ", ")) -> \(stackDescription())")
     }
@@ -70,7 +119,9 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "pop ignored at root -> \(stackDescription())")
             return
         }
+        applyTransition(routeTransitions.last ?? nil)
         stack.removeLast()
+        routeTransitions.removeLast()
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "pop -> \(stackDescription())")
     }
@@ -82,7 +133,9 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "pop(count: \(n)) ignored -> \(stackDescription())")
             return
         }
+        applyTransition(routeTransitions.last ?? nil)
         stack.removeLast(removeCount)
+        routeTransitions.removeLast(removeCount)
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "pop(count: \(n)) -> \(stackDescription())")
     }
@@ -94,7 +147,9 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) ignored (not found) -> \(stackDescription())")
             return
         }
+        applyTransition(routeTransitions.last ?? nil)
         stack = Array(stack.prefix(through: idx))
+        routeTransitions = Array(routeTransitions.prefix(through: idx))
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "popTo \(describe(route)) -> \(stackDescription())")
     }
@@ -106,7 +161,9 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) ignored (not found) -> \(stackDescription())")
             return
         }
+        applyTransition(routeTransitions.last ?? nil)
         stack = Array(stack.prefix(through: idx))
+        routeTransitions = Array(routeTransitions.prefix(through: idx))
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "popToLast \(describe(route)) -> \(stackDescription())")
     }
@@ -117,7 +174,9 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "popToRoot ignored -> []")
             return
         }
+        applyTransition(routeTransitions.last ?? nil)
         stack = [root]
+        routeTransitions = [nil]
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "popToRoot -> \(stackDescription())")
     }
@@ -130,7 +189,10 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "replace ignored: [] -> \(stackDescription())")
             return
         }
+        guard routes.allSatisfy({ allows($0, action: .replace) }) else { return }
+        applyTransition(nil)
         stack = routes
+        routeTransitions = Array(repeating: nil, count: routes.count)
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "replace -> \(stackDescription())")
     }
@@ -141,7 +203,10 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "replaceCurrent \(describe(route)) ignored -> []")
             return
         }
+        guard allows(route, action: .replaceCurrent) else { return }
+        applyTransition(nil)
         stack[stack.count - 1] = route
+        routeTransitions[routeTransitions.count - 1] = nil
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "replaceCurrent \(describe(route)) -> \(stackDescription())")
     }
@@ -155,6 +220,11 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             return
         }
         stack = [root] + tail
+        routeTransitions = Array(routeTransitions.prefix(tail.count + 1))
+        if routeTransitions.count != stack.count {
+            routeTransitions = Array(repeating: nil, count: stack.count)
+        }
+        applyTransition(routeTransitions.last ?? nil)
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "syncTail -> \(stackDescription())")
     }
@@ -173,8 +243,11 @@ public final class NavPilot<T: Hashable>: ObservableObject {
             NavPilotLogger.log(enabled: debug, "deepLink ignored -> \(url.absoluteString)")
             return false
         }
+        guard routes.allSatisfy({ allows($0, action: .deepLink) }) else { return false }
 
+        applyTransition(nil)
         stack = routes
+        routeTransitions = Array(repeating: nil, count: routes.count)
         persistIfNeeded()
         NavPilotLogger.log(enabled: debug, "deepLink handled -> \(stackDescription())")
         return true
@@ -192,6 +265,33 @@ public final class NavPilot<T: Hashable>: ObservableObject {
     private func persistIfNeeded() {
         persistenceHandler?(stack)
     }
+
+    func setTransitionApplier(_ applier: @escaping (NavPilotNavigationTransition?) -> Void) {
+        transitionApplier = applier
+        applyTransition(routeTransitions.last ?? nil)
+    }
+
+    private func applyTransition(_ transition: NavPilotNavigationTransition?) {
+        transitionApplier?(transition)
+    }
+
+    private func allows(_ route: T, action: NavPilotNavigationAction) -> Bool {
+        guard let routeGuard else { return true }
+        guard routeGuard(route, action) else {
+            NavPilotLogger.log(enabled: debug, "\(actionDescription(action)) blocked \(describe(route)) -> \(stackDescription())")
+            return false
+        }
+        return true
+    }
+
+    private func actionDescription(_ action: NavPilotNavigationAction) -> String {
+        switch action {
+        case .push: "push"
+        case .replace: "replace"
+        case .replaceCurrent: "replaceCurrent"
+        case .deepLink: "deepLink"
+        }
+    }
 }
 
 public extension NavPilot where T: Codable {
@@ -204,12 +304,24 @@ public extension NavPilot where T: Codable {
     /// and its view model after relaunch. It can fail to restore meaningfully if a screen
     /// depends on runtime-only values, closures, or non-codable objects that are not present
     /// in the route data.
-    convenience init(initial: T, debug: Bool = false, persistState: Bool = false, persistenceKey: String? = nil) {
+    convenience init(
+        initial: T,
+        debug: Bool = false,
+        persistState: Bool = false,
+        persistenceKey: String? = nil,
+        routeGuard: NavPilotRouteGuard<T>? = nil
+    ) {
         let key = NavPilotPersistence.defaultKey(for: T.self, customKey: persistenceKey)
         let loaded: [T]? = persistState ? NavPilotPersistence.loadStack(forKey: key) : nil
         let handler: (([T]) -> Void)? = persistState ? { stack in
             NavPilotPersistence.saveStack(stack, forKey: key)
         } : nil
-        self.init(initial: initial, debug: debug, loadedStack: loaded, persistenceHandler: handler)
+        self.init(
+            initial: initial,
+            debug: debug,
+            loadedStack: loaded,
+            persistenceHandler: handler,
+            routeGuard: routeGuard
+        )
     }
 }

@@ -28,6 +28,10 @@ struct ContentView: View {
                 E6StatePersistence()
             case .stackInspector:
                 E7StackInspector()
+            case .routeGuards:
+                E8RouteGuards()
+            case .navigationTransitions:
+                E9NavigationTransitions()
             }
         }
         .sheet(isPresented: $showSheet) {
@@ -44,7 +48,7 @@ struct ContentView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
-            .presentationDetents([.height(300)])
+            .presentationDetents([.medium])
         }
     }
 }
@@ -62,6 +66,8 @@ enum NavigationType:String, Hashable, CaseIterable {
     case deepLinking
     case statePersistence
     case stackInspector
+    case routeGuards
+    case navigationTransitions
 
     var title: String {
         switch self {
@@ -72,6 +78,8 @@ enum NavigationType:String, Hashable, CaseIterable {
         case .deepLinking: return "Deep Linking"
         case .statePersistence: return "State Persistence"
         case .stackInspector: return "Stack Inspector"
+        case .routeGuards: return "Route Guards"
+        case .navigationTransitions: return "Navigation Transitions"
         }
     }
 }

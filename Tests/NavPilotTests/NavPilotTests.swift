@@ -202,6 +202,38 @@ struct NavPilotTests {
         #expect(messages.isEmpty)
     }
 
+    @Test func routeGuardBlocksProtectedPushesWithoutChangingTheStack() async throws {
+        let pilot = NavPilot(initial: TestRoute.home) { route, action in
+            route != .settings || action != .push
+        }
+
+        pilot.push(.detail(id: 1))
+        pilot.push(.settings)
+
+        #expect(pilot.stack == [.home, .detail(id: 1)])
+    }
+
+    @Test func routeGuardKeepsMultiplePushesAtomic() async throws {
+        let pilot = NavPilot(initial: TestRoute.home) { route, _ in
+            route != .settings
+        }
+
+        pilot.push(.detail(id: 1), .settings)
+
+        #expect(pilot.stack == [.home])
+    }
+
+    @Test func routeGuardBlocksReplacement() async throws {
+        let pilot = NavPilot(initial: TestRoute.home) { route, action in
+            route != .settings || action != .replaceCurrent
+        }
+
+        pilot.push(.detail(id: 1))
+        pilot.replaceCurrent(with: .settings)
+
+        #expect(pilot.stack == [.home, .detail(id: 1)])
+    }
+
     @Test func encodesAndDecodesDeepLinks() async throws {
         let pilot = NavPilot<DeepLinkRoute>(initial: .home)
         pilot.push(.product(DeepLinkProduct(id: 1, name: "Keyboard")))

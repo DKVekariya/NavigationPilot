@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+#if canImport(UIKit) && canImport(UIKitNavigationTransitions)
+import UIKit
+import UIKitNavigationTransitions
+#endif
+
 
 public struct NavPilotHost<T: Hashable, Screen: View>: View {
 
@@ -34,6 +39,9 @@ public struct NavPilotHost<T: Hashable, Screen: View>: View {
                                 .environmentObject(pilot)
                         }
                         .environmentObject(pilot)
+                        #if canImport(UIKit) && canImport(UIKitNavigationTransitions)
+                        .background(NavPilotTransitionBridge(pilot: pilot).frame(width: 0, height: 0))
+                        #endif
                 }
                 .environmentObject(pilot)
 
@@ -58,6 +66,29 @@ public struct NavPilotHost<T: Hashable, Screen: View>: View {
         )
     }
 }
+
+#if canImport(UIKit) && canImport(UIKitNavigationTransitions)
+private struct NavPilotTransitionBridge<T: Hashable>: UIViewControllerRepresentable {
+    let pilot: NavPilot<T>
+
+    func makeUIViewController(context: Context) -> BridgeController {
+        BridgeController()
+    }
+
+    func updateUIViewController(_ controller: BridgeController, context: Context) {
+        DispatchQueue.main.async {
+            guard let navigationController = controller.navigationController else { return }
+            pilot.setTransitionApplier { [weak navigationController] transition in
+                navigationController?.setNavigationTransition(
+                    transition?.nativeTransition ?? .default
+                )
+            }
+        }
+    }
+
+    final class BridgeController: UIViewController {}
+}
+#endif
 
 // ─────────────────────────────────────────────────────────────
 // MARK: - Convenience modifier

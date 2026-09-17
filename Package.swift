@@ -18,11 +18,24 @@ let package = Package(
             targets: ["NavPilot"]
         ),
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/davdroman/swiftui-navigation-transitions",
+            exact: "0.16.0"
+        )
+    ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "NavPilot"
+            name: "NavPilot",
+            dependencies: [
+                .product(
+                    name: "UIKitNavigationTransitions",
+                    package: "swiftui-navigation-transitions",
+                    condition: .when(platforms: [.iOS, .macCatalyst, .tvOS, .visionOS])
+                )
+            ]
         ),
         .testTarget(
             name: "NavPilotTests",
